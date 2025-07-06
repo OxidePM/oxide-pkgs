@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-
 use crate::{
-    fetchers::fetchurl::FetchUrlDrv,
-    pkgs::{fetchers::fetchurl::FetchUrl, hello::Hello, perl::Perl},
+    build::fetchurl::{FetchUrl, FetchUrlDrv},
+    development::interpreters::perl::Perl,
+    misc::hello::Hello,
     stdenv::{Stdenv, StdenvDrv},
 };
 use oxide_core::prelude::*;
+use std::collections::HashMap;
 
 pub struct AllPkgs {
     pub stdenv: Stdenv,
@@ -31,7 +31,6 @@ pub fn all_pkgs() -> (HashMap<String, LazyDrv>, Box<AllPkgs>) {
     let hello = LazyDrv::new(Hello {
         stdenv: Stdenv::clone(&stdenv),
         fetchurl: FetchUrl::clone(&fetchurl),
-        perl: LazyDrv::clone(&perl),
     });
     pkgs.insert("hello".to_string(), LazyDrv::clone(&hello));
     (

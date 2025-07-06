@@ -1,6 +1,11 @@
-use std::ops::Deref;
+mod opt;
+pub use opt::*;
 
-use oxide_core::prelude::*;
+mod phases;
+pub use phases::*;
+
+use oxide_core::drv::{Drv, IntoDrv, LazyDrv};
+use std::ops::Deref;
 
 pub struct StdenvDrv;
 
@@ -9,8 +14,6 @@ impl IntoDrv for StdenvDrv {
         unimplemented!()
     }
 }
-
-pub struct StdenvOpt;
 
 #[derive(Clone)]
 #[repr(transparent)]
@@ -23,26 +26,12 @@ impl Deref for Stdenv {
     }
 }
 
-impl IntoDrv for Stdenv {
-    fn into_drv(self: Box<Self>) -> Drv {
-        unimplemented!()
-    }
-}
-
 impl Stdenv {
     pub fn new(stdenv: StdenvDrv) -> Self {
         Self(LazyDrv::new(stdenv))
     }
 
-    pub fn derivation(&self, opt: StdenvOpt) -> LazyDrv {
-        LazyDrv::new(StdenvParam(opt))
-    }
-}
-
-pub struct StdenvParam(StdenvOpt);
-
-impl IntoDrv for StdenvParam {
-    fn into_drv(self: Box<Self>) -> Drv {
-        unimplemented!()
+    pub fn builder(&self) -> StdenvBuilder {
+        StdenvBuilder::new(self)
     }
 }

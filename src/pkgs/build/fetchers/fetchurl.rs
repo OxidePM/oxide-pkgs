@@ -1,7 +1,6 @@
-use std::ops::Deref;
-
 use crate::stdenv::Stdenv;
 use oxide_core::prelude::*;
+use std::ops::Deref;
 
 pub struct FetchUrlDrv {
     pub stdenv: Stdenv,
@@ -9,11 +8,7 @@ pub struct FetchUrlDrv {
 
 impl IntoDrv for FetchUrlDrv {
     fn into_drv(self: Box<Self>) -> Drv {
-        DrvBuilder::new("fetchurl-0.0.0")
-            .builder("/bin/sh")
-            .arg("-c")
-            .arg(r#"printf "%s\n" "---hello from fetchurl---" $name > $out"#)
-            .build()
+        unimplemented!()
     }
 }
 
@@ -55,14 +50,14 @@ pub struct FetchUrlParam {
 
 impl IntoDrv for FetchUrlParam {
     fn into_drv(self: Box<Self>) -> Drv {
-        let name = base_name(&self.url).to_string();
-        DrvBuilder::new(name)
-            .builder("/bin/sh")
-            .arg("-c")
-            .arg(r#"printf "%s\n" "---hello from fetchurlparam---" $name $url $hash > $out"#)
-            .fixed_hash(self.hash)
-            .input("fetchurl", self.fetchurl)
-            .input("url", self.url)
-            .build()
+        //  let name = base_name(&self.url).to_string();
+        // DrvBuilder::new()
+        //     .name(name)
+        //     .builder(local_file!(""))
+        //     .fixed_hash(self.hash)
+        //     .input("fetchurl", self.fetchurl)
+        //     .input("url", self.url)
+        //     .build()
+        unimplemented!()
     }
 }
