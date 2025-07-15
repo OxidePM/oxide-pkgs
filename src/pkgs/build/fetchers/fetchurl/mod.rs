@@ -1,3 +1,6 @@
+mod mirrors;
+pub use mirrors::*;
+
 use crate::stdenv::Stdenv;
 use oxide_core::{builtins, prelude::*};
 
@@ -30,13 +33,22 @@ impl FetchUrl {
                 url,
                 hash,
             }),
-            FetchUrl::Builtins => LazyDrv::new(builtins::FetchUrl {
-                name: None,
-                url,
-                hash,
-                unpack: false,
-                executable: false,
-            }),
+            FetchUrl::Builtins => {
+                let url = if let Some(rest) = url.strip_prefix("mirror://") {
+                    let (mirror_name, suffix) = rest.split_once("/").unwrap();
+                    let mirror = MIRRORS.get_mirror(mirror_name).unwrap();
+                    format!("{}{}", mirror[0], suffix).into()
+                } else {
+                    url
+                };
+                LazyDrv::new(builtins::FetchUrl {
+                    name: None,
+                    url,
+                    hash,
+                    unpack: false,
+                    executable: false,
+                })
+            }
         }
     }
 }

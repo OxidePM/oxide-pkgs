@@ -6,10 +6,10 @@ use crate::{
     },
     development::{
         interpreters::perl::Perl,
-        libraries::{libiconv::LibiConv, zlib::Zlib},
+        libraries::{libiconv::LibIConv, zlib::Zlib},
     },
     misc::hello::Hello,
-    stdenv::{self, Stdenv, linux::Noop},
+    stdenv::{self, linux::Noop, Stdenv},
 };
 use oxide_core::prelude::*;
 use std::collections::HashMap;
@@ -17,29 +17,50 @@ use std::collections::HashMap;
 pub struct AllPkgs {
     pub stdenv: Stdenv,
     pub fetchurl: FetchUrl,
+    pub zlib: LazyDrv,
+    pub libiconv: LazyDrv,
+    pub pkg_config: LazyDrv,
     pub perl: LazyDrv,
+    pub curl: LazyDrv,
     pub hello: LazyDrv,
 }
 
 // TODO: make it more ergonomic
-// TODO: libc
-// TODO: zlib
-// TODO: pkg-config
 pub fn all_pkgs() -> (HashMap<String, LazyDrv>, Box<AllPkgs>) {
     let mut pkgs = HashMap::new();
     let stdenv = build_stdenv();
     let fetchurl = build_fetchurl(&stdenv);
 
+    let zlib = LazyDrv::new(Zlib {
+        stdenv: Stdenv::clone(&stdenv),
+        fetchurl: FetchUrl::clone(&fetchurl),
+        shared: None,
+        r#static: None,
+        split_static_out: None,
+    });
+    pkgs.insert("zlib".to_string(), LazyDrv::clone(&zlib));
+
+    let libiconv = LazyDrv::new(LibIConv {
+        stdenv: Stdenv::clone(&stdenv),
+        fetchurl: FetchUrl::clone(&fetchurl),
+        update_autotools_gnu_config_scripts: "".into(),
+        shared: None,
+        r#static: None,
+    });
+    pkgs.insert("libiconv".to_string(), LazyDrv::clone(&libiconv));
+
+    let pkg_config = LazyDrv::new(PkgConfig {
+        stdenv: Stdenv::clone(&stdenv),
+        fetchurl: FetchUrl::clone(&fetchurl),
+        libiconv: LazyDrv::clone(&libiconv),
+        vanilla: None,
+    });
+    pkgs.insert("pkg-config".to_string(), LazyDrv::clone(&pkg_config));
+
     let perl = LazyDrv::new(Perl {
         stdenv: Stdenv::clone(&stdenv),
         fetchurl: FetchUrl::clone(&fetchurl),
-        zlib: LazyDrv::new(Zlib {
-            stdenv: Stdenv::clone(&stdenv),
-            fetchurl: FetchUrl::clone(&fetchurl),
-            shared: None,
-            r#static: None,
-            split_static_out: None,
-        }),
+        zlib: LazyDrv::clone(&zlib),
         enable_threading: true,
     });
     pkgs.insert("perl".to_string(), LazyDrv::clone(&perl));
@@ -57,12 +78,17 @@ pub fn all_pkgs() -> (HashMap<String, LazyDrv>, Box<AllPkgs>) {
         fetchurl: FetchUrl::clone(&fetchurl),
     });
     pkgs.insert("hello".to_string(), LazyDrv::clone(&hello));
+
     (
         pkgs,
         Box::new(AllPkgs {
             stdenv,
             fetchurl,
+            zlib,
+            libiconv,
+            pkg_config,
             perl,
+            curl,
             hello,
         }),
     )
@@ -88,7 +114,7 @@ pub fn build_fetchurl(stdenv: &Stdenv) -> FetchUrl {
             pkg_config: LazyDrv::new(PkgConfig {
                 stdenv: Stdenv::clone(&stdenv),
                 fetchurl: FetchUrl::Builtins,
-                libiconv: LazyDrv::new(LibiConv {
+                libiconv: LazyDrv::new(LibIConv {
                     stdenv: Stdenv::clone(&stdenv),
                     fetchurl: FetchUrl::Builtins,
                     update_autotools_gnu_config_scripts: "".into(),

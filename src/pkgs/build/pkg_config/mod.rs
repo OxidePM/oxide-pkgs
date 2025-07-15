@@ -23,7 +23,7 @@ impl IntoDrv for PkgConfig {
             .version(version)
             .src(self.fetchurl.fetch(
                 format!("https://pkg-config.freedesktop.org/releases/{name}-{version}.tar.gz"),
-                hash!("sha512:YzJSc1lXcHFabXhyWVhOa2FtWnNZWE5xWm14ellXcG1jMjNSc2FtWnNjMlJxYkdaaGFuTnNhMlpoYzJSclphcw"),
+                hash!("sha512:PLll-nmNlm4bqO0fhLa2ItlaDWkNHy2N1fN7tucQngavRqQV7Cu4BZ8BAnOopqWnuS7qJAiKd5LJO7fCGn53Kw"),
             ))
             .out("out")
             .out("man")

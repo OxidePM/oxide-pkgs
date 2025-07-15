@@ -6,7 +6,7 @@ use oxide_core::{
     hash, local_file,
 };
 
-pub struct LibiConv {
+pub struct LibIConv {
     pub stdenv: Stdenv,
     pub fetchurl: FetchUrl,
     pub update_autotools_gnu_config_scripts: Expr,
@@ -14,7 +14,7 @@ pub struct LibiConv {
     pub shared: Option<bool>,
 }
 
-impl IntoDrv for LibiConv {
+impl IntoDrv for LibIConv {
     fn into_drv(self) -> Drv {
         let name = "libiconv";
         let version = "1.17";
@@ -25,11 +25,12 @@ impl IntoDrv for LibiConv {
             .name(name)
             .version(version)
             .src(self.fetchurl.fetch(
-                    format!("mirror://gnu/libiconv/{name}-${version}.tar.gzmirror://gnu/libiconv/{name}-{version}.tar.gz"), 
-                    hash!("sha512:YzJSc1lXcHFabXhyWVhOa2FtWnNZWE5xWm14ellXcG1jMjNSc2FtWnNjMlJxYkdaaGFuTnNhMlpoYzJSclphcw"),
+                    format!("mirror://gnu/libiconv/{name}-{version}.tar.gz"),
+                    hash!("sha512:tV3EG2q4Dl4Z_KqSDqaQcMRHakko0t9aNhFfnpM-Semzv05RLy5zbhHAPqxIrV3cmNdDdahkRYtwn166fZdyHA"),
             ))
             .input_bool("ENABLE_PARALLEL_BUILDING", true)
-            .dep_build_host(self.update_autotools_gnu_config_scripts)
+            // TODO:
+            // .dep_build_host(self.update_autotools_gnu_config_scripts)
             .input("SETUP_HOOKS", expr![
                 local_file!("../../../build/setup-hooks/role.bash"),
                 local_file!("setup-hook.sh"),

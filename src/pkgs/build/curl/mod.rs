@@ -21,7 +21,7 @@ impl IntoDrv for Curl {
             .name("curl")
             .version(version)
             .src(self.fetchurl.fetch(
-                format!("https://curl.haxx.se/download/curl-${version}.tar.xz"),
+                format!("https://curl.haxx.se/download/curl-{version}.tar.xz"),
                 hash!("sha512:YzJSc1lXcHFabXhyWVhOa2FtWnNZWE5xWm14ellXcG1jMjNSc2FtWnNjMlJxYkdaaGFuTnNhMlpoYzJSclphcw"),
             ))
             // TODO: use indoc

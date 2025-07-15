@@ -23,7 +23,7 @@ get_all_output_names() {
 run_hook() {
     local hook_name="$1"
     shift
-    local hooks_slice="${hook_name%HOOK}HOOKS[@]"
+    local hooks_slice="${hook_name%_HOOK}_HOOKS[@]"
 
     local hook
     for hook in "_call_implicit_hook 0 $hook_name" ${!hooks_slice+"${!hooks_slice}"}; do
@@ -39,7 +39,7 @@ run_hook() {
 run_one_hook() {
     local hook_name="$1"
     shift
-    local hooks_slice="${hook_name%HOOK}HOOKS[@]"
+    local hooks_slice="${hook_name%_HOOK}_HOOKS[@]"
 
     local hook ret=1
     for hook in "_call_implicit_hook 1 $hook_name" ${!hooks_slice+"${!hooks_slice}"}; do
@@ -119,13 +119,7 @@ addToSearchPath() {
 # syntax when they switch to setting __structuredAttrs = true.
 prependToVar() {
     local -n nameref="$1"
-    local useArray type
-
-    if [ -n "$__structuredAttrs" ]; then
-        useArray=true
-    else
-        useArray=false
-    fi
+    local useArray=false
 
     # check if variable already exist and if it does then do extra checks
     if type=$(declare -p "$1" 2> /dev/null); then
@@ -152,13 +146,7 @@ prependToVar() {
 # Same as above
 appendToVar() {
     local -n nameref="$1"
-    local useArray type
-
-    if [ -n "$__structuredAttrs" ]; then
-        useArray=true
-    else
-        useArray=false
-    fi
+    local useArray=false
 
     # check if variable already exist and if it does then do extra checks
     if type=$(declare -p "$1" 2> /dev/null); then
@@ -555,7 +543,7 @@ for pkg in "${DEPS_TARGET_TARGET[@]}" "${PROPAGATED_TARGET_TARGET[@]}"; do
     findInputs "$pkg"  1  1
 done
 # Default inputs must be processed last
-for pkg in "${DEFAULT_DEPS_BUILD_HOST[@]}"; do
+for pkg in "${default_build_host[@]}"; do
     findInputs "$pkg" -1  0
 done
 for pkg in "${default_host_target[@]}"; do
@@ -942,7 +930,7 @@ _default_unpack() {
 unpack_file() {
     cur_src="$1"
     echo "unpacking source archive $cur_src"
-    if ! run_one_hook unpack_cmd "$cur_src"; then
+    if ! run_one_hook UNPACK_CMD "$cur_src"; then
         echo "do not know how to unpack source archive $cur_src"
         exit 1
     fi
@@ -952,17 +940,17 @@ unpack_file() {
 unpack_phase() {
     run_hook PRE_UNPACK
 
-    if [ -z "${srcs:-}" ]; then
-        if [ -z "${src:-}" ]; then
+    if [ -z "${SRCS:-}" ]; then
+        if [ -z "${SRC:-}" ]; then
             # shellcheck disable=SC2016
-            echo 'variable $src or $srcs should point to the source'
+            echo 'variable $SRC or $SRCS should point to the source'
             exit 1
         fi
-        srcs="$src"
+        SRCS="$SRC"
     fi
 
     local -a srcs_array
-    concatTo srcs_array srcs
+    concatTo srcs_array SRCS
 
     # To determine the source directory created by unpacking the
     # source archives, we record the contents of the current
@@ -1124,7 +1112,9 @@ configure_phase() {
         fi
 
         if [ -z "${dontPatchShebangsInConfigure:-}" ]; then
-            patchShebangs --build "$CONFIGURE_SCRIPT"
+            # TODO:
+            # patchShebangs --build "$CONFIGURE_SCRIPT"
+            echo "TODO: patchShebangs"
         fi
     fi
 

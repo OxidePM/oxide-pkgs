@@ -25,21 +25,34 @@ impl IntoDrv for Zlib {
             .version("1.3.1")
             .src(self.fetchurl.fetch(
                 format!("https://www.zlib.net/fossils/zlib-{version}.tar.gz"),
-                hash!("sha512:YzJSc1lXcHFabXhyWVhOa2FtWnNZWE5xWm14ellXcG1jMjNSc2FtWnNjMlJxYkdaaGFuTnNhMlpoYzJSclphcw"),
+                hash!("sha512:vUFhtqfzz1sc1ZrLRgf5N5tgEXZmVUiOz98ArlTJJkRE3wkwnPxOaZKbZlNaFwFpJZTF0ppe5awPrKPUKpHm_g"
+                ),
             ))
             .input_bool("STRICT_DEPS", true)
             .out("out")
             .out("dev")
             .optional(split_static_out, |builder| builder.out("static"))
-            .configure_flags(format!("{}{}", r#static.then_some("--static").unwrap_or_default(), shared.then_some("--shared").unwrap_or_default()))
+            .configure_flags(format!(
+                "{}{}",
+                r#static.then_some("--static").unwrap_or_default(),
+                shared.then_some("--shared").unwrap_or_default()
+            ))
             .input_bool("DONT_DISABLE_STATIC", true)
             .input_bool("DONT_ADD_STATIC_CONFIGURE_FLAGS", true)
             .input_bool("SET_OUTPUT_FLAG", false)
             .input("OUTPUT_DOC", "dev")
-            .post_install(format!("{}", split_static_out.then_some(r#"moveToOutput lib/libz.a "$static""#).unwrap_or_default()))
+            .post_install(format!(
+                "{}",
+                split_static_out
+                    .then_some(r#"moveToOutput lib/libz.a "$static""#)
+                    .unwrap_or_default()
+            ))
             .input_bool("ENABLE_PARALLEL_BUILDING", true)
             .do_check()
-            .make_flags(format!("{}", shared.then_some("SHARED_MODE=1").unwrap_or_default()))
+            .make_flags(format!(
+                "{}",
+                shared.then_some("SHARED_MODE=1").unwrap_or_default()
+            ))
             .build()
     }
 }

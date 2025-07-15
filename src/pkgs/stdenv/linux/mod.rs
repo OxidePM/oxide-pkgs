@@ -128,11 +128,17 @@ pub fn stager(stage: StdenvStage) -> StdenvStage {
                         .name("bootstrap-stage0-glibc")
                         .version("bootstrap-files")
                         // TODO: this would not be necessary once we will have format strings
+                        .out("out")
+                        .out("dev")
+                        .out("lib")
                         .input("bootstrap_tools", &bootstrap_tools)
                         .build_command(
-                            r"mkdir -p $out
+                            r#"mkdir -p $out
 ln -s ${bootstrap_tools}/lib $out/lib
-ln -s ${bootstrap_tools}/include-glibc $out/include",
+ln -s ${bootstrap_tools}/include-glibc $out/include
+# TODO: remove
+mkdir "$dev"
+mkdir "$lib""#,
                         )
                         .lazy(),
                 );

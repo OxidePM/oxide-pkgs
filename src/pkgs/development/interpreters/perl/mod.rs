@@ -30,8 +30,8 @@ impl IntoDrv for Perl {
             .make_derivation()
             .name("perl")
             .src(self.fetchurl.fetch(
-                format!("mirror://cpan/src/5.0/perl-${version}.tar.gz"),
-                hash!("sha512:YzJSc1lXcHFabXhyWVhOa2FtWnNZWE5xWm14ellXcG1jMjNSc2FtWnNjMlJxYkdaaGFuTnNhMlpoYzJSclphcw"),
+                format!("mirror://cpan/src/5.0/perl-{version}.tar.gz"),
+                hash!("sha512:fq6a0PymjshE-2APytfavrpCdpV8y0oXomFi8Icb-eRgqyENgsaf_CcLYkYQxxqnZO_pvr5pZzSQG016MKdTEg"),
             ))
             .input("STRICT_DEPS", "1")
             .out("out")
@@ -39,8 +39,8 @@ impl IntoDrv for Perl {
             .out("devdoc")
             .patch(local_file!("patches/CVE-2024-56406.patch"))
             .patch(local_file!("patches/CVE-2025-40909.patch"))
-            .patch(local_file!("fix-build-with-only-C-locales-5.40.0.patch"))
-            .patch(local_file!("no-sys-dirs-5.40.0.patch"))
+            .patch(local_file!("patches/fix-build-with-only-C-locale-5.40.0.patch"))
+            .patch(local_file!("patches/no-sys-dirs-5.40.0.patch"))
             .post_patch(
 r#"postPatch =
 substituteInPlace dist/PathTools/Cwd.pm \
