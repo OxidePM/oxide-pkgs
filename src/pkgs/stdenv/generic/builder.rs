@@ -129,11 +129,7 @@ impl StdenvBuilder {
     where
         F: Fn(Self) -> Self,
     {
-        if v {
-            f(self)
-        } else {
-            self
-        }
+        if v { f(self) } else { self }
     }
 
     pub fn builder<T>(mut self, builder: T) -> Self

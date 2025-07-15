@@ -1,7 +1,7 @@
 use crate::{
     build::fetchurl::FetchUrl, development::interpreters::perl, stdenv::generic::StdenvDrv,
 };
-use bootstrap_files::{i686_unknown_linux, x86_64_unknown_linux, BootstrapFiles};
+use bootstrap_files::{BootstrapFiles, i686_unknown_linux, x86_64_unknown_linux};
 use bootstrap_tools::BootstrapTools;
 use oxide_core::{
     drv::{Drv, DrvBuilder, IntoDrv, LazyDrv},
