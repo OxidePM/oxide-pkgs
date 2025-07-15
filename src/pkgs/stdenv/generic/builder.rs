@@ -1,12 +1,10 @@
 use super::{
-    Stdenv,
-    phases::{
-        BuildPhase, CheckPhase, ConfigurePhase, FixPhase, InstallCheckPhase, InstallPhase,
-        PatchPhase, UnpackPhase,
-    },
+    BuildPhase, CheckPhase, ConfigurePhase, Deps, FixPhase, InstallCheckPhase, InstallPhase,
+    PatchPhase, UnpackPhase,
 };
+use crate::stdenv::StdenvDrv;
 use oxide_core::{
-    drv::{Drv, DrvBuilder, IntoDrv},
+    drv::{Drv, DrvBuilder, IntoDrv, LazyDrv},
     expr::Expr,
     hash::Hash,
     local_file,
@@ -14,43 +12,8 @@ use oxide_core::{
     types::Cow,
 };
 
-#[derive(Default)]
-pub struct Deps {
-    pub build_build: Vec<Expr>,
-    pub build_host: Vec<Expr>,
-    pub build_target: Vec<Expr>,
-    pub host_host: Vec<Expr>,
-    pub host_target: Vec<Expr>,
-    pub target_target: Vec<Expr>,
-}
-
-impl Deps {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn build(self, builder: DrvBuilder, propagated: bool) -> DrvBuilder {
-        if propagated {
-            builder
-                .input("PROPAGATED_BUILD_BUILD", self.build_build)
-                .input("PROPAGATED_BUILD_HOST", self.build_host)
-                .input("PROPAGATED_BUILD_TARGET", self.build_target)
-                .input("PROPAGATED_HOST_HOST", self.host_host)
-                .input("PROPAGATED_HOST_TARGET", self.host_target)
-                .input("PROPAGATED_TARGET_TARGET", self.target_target)
-        } else {
-            builder
-                .input("DEPS_BUILD_BUILD", self.build_build)
-                .input("DEPS_BUILD_HOST", self.build_host)
-                .input("DEPS_BUILD_TARGET", self.build_target)
-                .input("DEPS_HOST_HOST", self.host_host)
-                .input("DEPS_HOST_TARGET", self.host_target)
-                .input("DEPS_TARGET_TARGET", self.target_target)
-        }
-    }
-}
-
 pub struct StdenvBuilder {
+    pub(super) stdenv: StdenvDrv,
     // default drv args
     pub(super) drv_builder: DrvBuilder,
     pub(super) name: Option<Cow<str>>,
@@ -58,6 +21,7 @@ pub struct StdenvBuilder {
     pub(super) builder: Option<Expr>,
     // stdenv drv args
     pub(super) src: Option<Expr>,
+    pub(super) build_command: Option<Expr>,
     // deps
     pub(super) deps: Deps,
     pub(super) propagated: Deps,
@@ -75,14 +39,15 @@ pub struct StdenvBuilder {
 }
 
 impl StdenvBuilder {
-    pub fn new(stdenv: &Stdenv) -> Self {
-        let drv_builder = DrvBuilder::new().input("stdenv", &**stdenv);
+    pub fn new(stdenv: StdenvDrv) -> Self {
         Self {
-            drv_builder,
+            stdenv,
+            drv_builder: DrvBuilder::new(),
             name: None,
             version: None,
             builder: None,
             src: None,
+            build_command: None,
             deps: Deps::new(),
             propagated: Deps::new(),
             pre_phase: None,
@@ -143,6 +108,34 @@ impl StdenvBuilder {
         self
     }
 
+    pub fn input_if<K, V>(mut self, key: K, expr: Option<V>) -> Self
+    where
+        K: Into<String>,
+        V: Into<Expr>,
+    {
+        self.drv_builder = self.drv_builder.input_if(key, expr);
+        self
+    }
+
+    pub fn input_bool<K>(mut self, key: K, v: bool) -> Self
+    where
+        K: Into<String>,
+    {
+        self.drv_builder = self.drv_builder.input_bool(key, v);
+        self
+    }
+
+    pub fn optional<F>(self, v: bool, f: F) -> Self
+    where
+        F: Fn(Self) -> Self,
+    {
+        if v {
+            f(self)
+        } else {
+            self
+        }
+    }
+
     pub fn builder<T>(mut self, builder: T) -> Self
     where
         T: Into<Expr>,
@@ -151,19 +144,19 @@ impl StdenvBuilder {
         self
     }
 
-    pub fn arg<T>(mut self, arg: T) -> Self
-    where
-        T: Into<Expr>,
-    {
-        self.drv_builder = self.drv_builder.arg(arg);
-        self
-    }
-
     pub fn src<T>(mut self, src: T) -> Self
     where
         T: Into<Expr>,
     {
         self.src = Some(src.into());
+        self
+    }
+
+    pub fn build_command<T>(mut self, build_command: T) -> Self
+    where
+        T: Into<Expr>,
+    {
+        self.build_command = Some(build_command.into());
         self
     }
 
@@ -186,13 +179,24 @@ impl StdenvBuilder {
     pub fn build(self) -> Drv {
         let name = self.name.expect("name must be provided");
         // TODO: should we allow derivations with no version???
-        let version = self.version.expect("version must be provided");
-        let versioned_name = format!("{name}-{version}");
+        let versioned_name = if let Some(version) = self.version {
+            format!("{name}-{version}")
+        } else {
+            name.to_string()
+        };
         let builder = self
             .drv_builder
             .name(versioned_name)
-            .builder(self.builder.unwrap_or(local_file!("builder.sh")))
+            .builder(self.stdenv.shell.clone())
+            .arg("-e")
+            .arg(local_file!("scripts/source-stdenv.sh"))
+            .arg(
+                self.builder
+                    .unwrap_or(local_file!("scripts/default-builder.sh")),
+            )
+            .input("stdenv", LazyDrv::new(self.stdenv))
             .input_if("SRC", self.src)
+            .input_if("BUILD_COMMAND", self.build_command)
             .input_if("PRE_PHASE", self.pre_phase)
             .input_if("POST_PHASE", self.post_phase);
         let builder = self.deps.build(builder, false);
@@ -207,10 +211,14 @@ impl StdenvBuilder {
         let builder = self.install_check.build(builder);
         builder.build()
     }
-}
 
-impl IntoDrv for StdenvBuilder {
-    fn into_drv(self: Box<Self>) -> Drv {
-        self.build()
+    pub fn lazy(self) -> LazyDrv {
+        pub struct Wrapper(StdenvBuilder);
+        impl IntoDrv for Wrapper {
+            fn into_drv(self) -> Drv {
+                self.0.build()
+            }
+        }
+        LazyDrv::new(Wrapper(self))
     }
 }

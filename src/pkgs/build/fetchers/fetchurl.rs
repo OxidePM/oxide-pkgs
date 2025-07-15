@@ -1,63 +1,69 @@
 use crate::stdenv::Stdenv;
-use oxide_core::prelude::*;
-use std::ops::Deref;
-
-pub struct FetchUrlDrv {
-    pub stdenv: Stdenv,
-}
-
-impl IntoDrv for FetchUrlDrv {
-    fn into_drv(self: Box<Self>) -> Drv {
-        unimplemented!()
-    }
-}
+use oxide_core::{builtins, prelude::*};
 
 #[derive(Clone)]
-#[repr(transparent)]
-pub struct FetchUrl(LazyDrv);
-
-impl Deref for FetchUrl {
-    type Target = LazyDrv;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+pub enum FetchUrl {
+    Stdenv(StdenvFetchUrl),
+    Builtins,
 }
 
 impl FetchUrl {
-    pub fn new(fetchurl: FetchUrlDrv) -> Self {
-        Self(LazyDrv::new(fetchurl))
+    pub fn new(fetchurl: StdenvFetchUrl) -> Self {
+        Self::Stdenv(fetchurl)
     }
 
+    pub fn from_builtins() -> Self {
+        Self::Builtins
+    }
+
+    // TODO: for now super simple, only url and hash
+    // expand in the future to allow more arguments
     pub fn fetch<T>(&self, url: T, hash: Hash) -> LazyDrv
     where
         T: Into<Cow<str>>,
     {
-        let fetchurl = LazyDrv::clone(&self.0);
         let url = url.into();
-        LazyDrv::new(FetchUrlParam {
-            fetchurl,
-            url,
-            hash,
-        })
+        match self {
+            FetchUrl::Stdenv(fetchurl) => LazyDrv::new(FetchUrlParam {
+                stdenv_no_cc: fetchurl.stdenv_no_cc.clone(),
+                curl: LazyDrv::clone(&fetchurl.curl),
+                url,
+                hash,
+            }),
+            FetchUrl::Builtins => LazyDrv::new(builtins::FetchUrl {
+                name: None,
+                url,
+                hash,
+                unpack: false,
+                executable: false,
+            }),
+        }
     }
 }
 
-pub struct FetchUrlParam {
-    fetchurl: LazyDrv,
+#[derive(Clone)]
+pub struct StdenvFetchUrl {
+    pub stdenv_no_cc: Stdenv,
+    pub curl: LazyDrv,
+}
+
+struct FetchUrlParam {
+    stdenv_no_cc: Stdenv,
+    curl: LazyDrv,
     url: Cow<str>,
     hash: Hash,
 }
 
 impl IntoDrv for FetchUrlParam {
-    fn into_drv(self: Box<Self>) -> Drv {
-        //  let name = base_name(&self.url).to_string();
-        // DrvBuilder::new()
-        //     .name(name)
-        //     .builder(local_file!(""))
-        //     .fixed_hash(self.hash)
-        //     .input("fetchurl", self.fetchurl)
-        //     .input("url", self.url)
-        //     .build()
-        unimplemented!()
+    fn into_drv(self) -> Drv {
+        let name = base_name(&self.url).to_string();
+        self.stdenv_no_cc
+            .make_derivation()
+            .name(name)
+            .builder(local_file!("builder.sh"))
+            .fixed_hash(self.hash)
+            .input("url", self.url)
+            .input("curl", self.curl)
+            .build()
     }
 }

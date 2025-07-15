@@ -59,6 +59,14 @@ impl StdenvBuilder {
         self
     }
 
+    pub fn build_flags<T>(mut self, build_flags: T) -> Self
+    where
+        T: Into<Cow<str>>,
+    {
+        self.build.build_flags = Some(build_flags.into());
+        self
+    }
+
     pub fn make_flags<T>(mut self, make_flags: T) -> Self
     where
         T: Into<Cow<str>>,
