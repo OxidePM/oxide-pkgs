@@ -9,7 +9,7 @@ use crate::{
         libraries::{libiconv::LibIConv, zlib::Zlib},
     },
     misc::hello::Hello,
-    stdenv::{self, linux::Noop, Stdenv},
+    stdenv::{self, Stdenv, linux::Noop},
 };
 use oxide_core::prelude::*;
 use std::collections::HashMap;
